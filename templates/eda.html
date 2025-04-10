@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% block title %}Exploratory Data Analysis{% endblock %}
+
+{% block additional_styles %}
+<style>
+    /* Custom Font Import */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+    .eda-container {
+        background: linear-gradient(135deg, rgba(245, 247, 250, 0.9) 0%, rgba(224, 231, 255, 0.9) 100%);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 40px;
+        animation: fadeIn 1s ease-in-out;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .eda-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .eda-title {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2e7d32;
+        margin-bottom: 25px;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        position: relative;
+        padding-bottom: 10px;
+    }
+
+    .eda-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 4px;
+        background: #2e7d32;
+        border-radius: 2px;
+        animation: underlinePulse 2s infinite;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes underlinePulse {
+        0% { width: 0; }
+        50% { width: 50px; }
+        100% { width: 0; }
+    }
+
+    .stats-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .stats-table th, .stats-table td {
+        padding: 15px;
+        text-align: left;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+    }
+
+    .stats-table th {
+        background: linear-gradient(90deg, #2e7d32, #4caf50);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stats-table td {
+        background: white;
+        transition: background 0.3s ease;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .stats-table tr:hover td {
+        background: #f0f4f8;
+    }
+
+    .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .matrix-table th, .matrix-table td {
+        padding: 10px;
+        text-align: center;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+
+    .matrix-table th {
+        background: linear-gradient(90deg, #2e7d32, #4caf50);
+        color: white;
+        font-weight: 600;
+    }
+
+    .matrix-table td {
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+
+    .matrix-section {
+        margin-top: 20px;
+    }
+
+    .matrix-section h3 {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.5rem;
+        color: #2e7d32;
+        margin-bottom: 10px;
+    }
+
+    .chart-section {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .chart-section img {
+        width: 100%;
+        max-width: 800px;
+        height: auto;
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .chart-section img:hover {
+        transform: scale(1.02);
+    }
+
+    @media (max-width: 768px) {
+        .eda-title {
+            font-size: 2rem;
+        }
+        .stats-table th, .stats-table td {
+            padding: 10px;
+            font-size: 1rem;
+        }
+        .matrix-table th, .matrix-table td {
+            padding: 8px;
+            font-size: 0.8rem;
+        }
+        .chart-section img {
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="eda-title">Exploratory Data Analysis</h1>
+    
+    <div class="eda-container">
+        <h2 class="eda-title" style="font-size: 2rem; color: #2e7d32;">Statistical Analysis</h2>
+        <div class="table-responsive">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Statistic</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in stats_data %}
+                        <tr>
+                            <td>{{ row.statistic }}</td>
+                            <td>{{ row.value }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="matrix-section">
+            <h3>Correlation Matrix</h3>
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        {% for header in corr_matrix[1] %}
+                            <th>{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in corr_matrix[0] %}
+                        <tr>
+                            {% for value in row %}
+                                <td>{{ "%.4f"|format(value) }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="matrix-section">
+            <h3>Covariance Matrix</h3>
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        {% for header in cov_matrix[1] %}
+                            <th>{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in cov_matrix[0] %}
+                        <tr>
+                            {% for value in row %}
+                                <td>{{ "%.4f"|format(value) }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="eda-container">
+        <h2 class="eda-title" style="font-size: 2rem; color: #2e7d32;">Model Analysis</h2>
+        {% if model_metrics %}
+        <div class="table-responsive">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Mean Absolute Error</th>
+                        <th>R-squared Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model_name, metrics in model_metrics.items() %}
+                        <tr>
+                            <td>{{ model_name }}</td>
+                            <td>{{ "%.2f"|format(metrics.MAE) }}</td>
+                            <td>{{ "%.2f"|format(metrics.R2) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>No model performance data available.</p>
+        {% endif %}
+
+        <div class="chart-section">
+            <h3>Model Predictions vs Actual Values</h3>
+            {% if model_metrics %}
+            <img src="/static/predictions_vs_actual.png" alt="Model Predictions vs Actual Values">
+            {% else %}
+            <p>Model predictions graph not available due to missing data.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="eda-container">
+        <h2 class="eda-title" style="font-size: 2rem; color: #2e7d32;">Visualizations</h2>
+        <div class="chart-section">
+            <img src="/static/correlation_heatmap.png" alt="Correlation Matrix Heatmap">
+        </div>
+    </div>
+</div>
+{% endblock %}
