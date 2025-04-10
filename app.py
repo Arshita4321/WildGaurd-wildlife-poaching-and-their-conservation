@@ -21,7 +21,12 @@ app = Flask(__name__)
 
 # Load Dataset
 def load_data():
-    df = pd.read_csv("updated_wildlife_poaching.csv")
+    csv_file = "wildlife_poaching.csv"
+    if not os.path.exists(csv_file):
+        logging.error(f"File not found: {csv_file}. Please ensure 'wildlife_poaching.csv' is in the project directory.")
+        raise FileNotFoundError(f"File not found: {csv_file}")
+    
+    df = pd.read_csv(csv_file)
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "Unknown")
@@ -34,21 +39,27 @@ def load_data():
                         df['Crimes Reported Per Year'] * 0.02).clip(0, 10)
     return df
 
-df = load_data()
+try:
+    df = load_data()
+except FileNotFoundError as e:
+    logging.error(str(e))
+    df = pd.DataFrame()  # Fallback to empty DataFrame if file is missing
 
 # Train a simple model and save it
 def train_model():
+    if df.empty:
+        logging.error("Cannot train model: DataFrame is empty due to missing CSV file.")
+        return None, {}, [], 0, 0
+
     categorical_columns = df.select_dtypes(include=['object']).columns
     label_encoders = {}
     processed_df = df.copy()
     
     for col in categorical_columns:
         le = LabelEncoder()
-        # Ensure all possible values are encoded, including from input possibilities
         processed_df[col] = le.fit_transform(processed_df[col].astype(str))
         label_encoders[col] = le
     
-    # Features include Poaching Incidents, exclude Risk_Score and Crime Report Date
     features = processed_df.drop(columns=['Risk_Score', 'Crime Report Date'])
     target = processed_df['Risk_Score']
     
@@ -72,18 +83,22 @@ def train_model():
 
 # Check if all required model files exist
 required_files = ['rf_model.pkl', 'label_encoders.pkl', 'metrics.pkl']
-if not all(os.path.exists(file) for file in required_files):
+if not all(os.path.exists(file) for file in required_files) and not df.empty:
     logging.info("One or more model files are missing. Training the model...")
     model, encoders, feature_names, mae, r2 = train_model()
 else:
-    with open('rf_model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    with open('label_encoders.pkl', 'rb') as f:
-        encoders = pickle.load(f)
-    with open('metrics.pkl', 'rb') as f:
-        metrics = pickle.load(f)
-        mae, r2 = metrics['mae'], metrics['r2']
-    feature_names = list(df.drop(columns=['Risk_Score', 'Crime Report Date']).columns)
+    if df.empty:
+        model, encoders, feature_names, mae, r2 = None, {}, [], 0, 0
+        logging.warning("Using default model values due to missing CSV file.")
+    else:
+        with open('rf_model.pkl', 'rb') as f:
+            model = pickle.load(f)
+        with open('label_encoders.pkl', 'rb') as f:
+            encoders = pickle.load(f)
+        with open('metrics.pkl', 'rb') as f:
+            metrics = pickle.load(f)
+            mae, r2 = metrics['mae'], metrics['r2']
+        feature_names = list(df.drop(columns=['Risk_Score', 'Crime Report Date']).columns)
 
 # Function to generate and save plots
 def generate_plots(df_filtered):
@@ -183,6 +198,8 @@ def generate_prediction_plots(data):
 
 @app.route('/')
 def index():
+    if df.empty:
+        return "Error: Unable to load data. Please ensure 'wildlife_poaching.csv' is in the project directory.", 500
     stats = {
         'total_records': len(df),
         'year_range': f"{int(df['Year'].min())} - {int(df['Year'].max())}",
@@ -191,7 +208,7 @@ def index():
         'most_affected_state': df.groupby('State')['Poaching Incidents'].sum().idxmax(),
         'most_poached_species': df['Species Name'].mode()[0]
     }
-    return render_template('index.html', stats=stats)
+    return render_template('index.html', stats=stats)  # Reverted to index.html
 
 @app.route('/dashboard')
 def dashboard():
@@ -234,6 +251,8 @@ def get_data():
 
 @app.route('/predictor')
 def predictor():
+    if df.empty:
+        return "Error: Unable to load data. Please ensure 'wildlife_poaching.csv' is in the project directory.", 500
     return render_template('predictor.html',
                           states=sorted(df['State'].dropna().unique().tolist()),
                           species=sorted(df['Species Name'].dropna().unique().tolist()),
@@ -249,7 +268,9 @@ def predict():
     data = request.get_json()
     logging.debug(f"Received prediction request: {data}")
     
-    # Prepare input data with all expected features
+    if df.empty or model is None:
+        return jsonify({'error': 'Model not trained due to missing data.'}), 500
+
     input_data = pd.DataFrame([data], columns=feature_names)
     for col in input_data.columns:
         if col in encoders:
@@ -257,19 +278,16 @@ def predict():
                 input_data[col] = encoders[col].transform([str(input_data[col].iloc[0])])
             except ValueError as e:
                 logging.warning(f"Encoding unseen label for {col}: {e}. Using default value.")
-                # Map unseen labels to a default encoded value (e.g., the first class)
                 input_data[col] = encoders[col].transform([encoders[col].classes_[0]])[0]
     
-    # Predict Risk Score
     prediction = model.predict(input_data)[0]
     logging.debug(f"Predicted Risk Score: {prediction}")
     
-    # Generate plots
     trend_path, importance_path = generate_prediction_plots(data)
     
     response = {
         'prediction': round(float(prediction), 1),
-        'confidence': round(float(np.random.uniform(0.7, 0.95)), 2),  # Placeholder
+        'confidence': round(float(np.random.uniform(0.7, 0.95)), 2),
         'trend_chart': '/static/trend.png',
         'feature_importance_chart': '/static/feature_importance.png',
         'mae': float(mae),
