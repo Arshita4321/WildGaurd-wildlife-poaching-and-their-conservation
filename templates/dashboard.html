@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+    }
+
+    .chart-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .chart-title i {
+        margin-right: 10px;
+        font-size: 1.8rem;
+    }
+
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+    }
+
+    .filter-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+
+    #loadingSpinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .chart-section img {
+        width: 100%;
+        height: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="main-heading text-center mb-4">Wildlife Poaching Dashboard</h1>
+
+    <!-- Filter Section -->
+    <div class="filter-card">
+        <h4 class="filter-title"><i class="fas fa-filter"></i> Filter Data</h4>
+        <div class="row">
+            <div class="col-md-3">
+                <label for="stateFilter" class="form-label">State</label>
+                <select id="stateFilter" class="form-select">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="speciesFilter" class="form-label">Species</label>
+                <select id="speciesFilter" class="form-select">
+                    <option value="">All Species</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="yearFilter" class="form-label">Year</label>
+                <select id="yearFilter" class="form-select">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="crimeTypeFilter" class="form-label">Crime Type</label>
+                <select id="crimeTypeFilter" class="form-select">
+                    <option value="">All Crime Types</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="reasonFilter" class="form-label">Reason for Poaching</label>
+                <select id="reasonFilter" class="form-select">
+                    <option value="">All Reasons</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status" style="width: 5rem; height: 5rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading data visualizations...</p>
+    </div>
+
+    <!-- Chart Sections -->
+    <div id="chartsSection" style="display: none;">
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-chart-line"></i> Yearly Trend of Poaching Incidents</h3>
+            <div class="chart-section">
+                <img id="yearlyTrendImg" src="" alt="Yearly Trend">
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-map-marked-alt"></i> Poaching Incidents Across States</h3>
+            <div class="chart-section">
+                <img id="stateIncidentsImg" src="" alt="State Incidents">
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-paw"></i> Most Poached Species</h3>
+            <div class="chart-section">
+                <img id="speciesIncidentsImg" src="" alt="Species Incidents">
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-box-open"></i> Seized Items Distribution</h3>
+            <div class="chart-section">
+                <img id="seizedItemsImg" src="" alt="Seized Items">
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-layer-group"></i> Reason for Poaching vs. Crime Type</h3>
+            <div class="chart-section">
+                <img id="reasonCrimeImg" src="" alt="Reason vs Crime">
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title"><i class="fas fa-globe"></i> Poaching Incidents by State and Year</h3>
+            <div class="chart-section">
+                <img id="stateYearHeatmapImg" src="" alt="State-Year Heatmap">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const chartsSection = document.getElementById("chartsSection");
+
+    // Fetch initial data and populate filters
+    async function initializeDashboard() {
+        try {
+            const response = await fetch('/api/data');
+            const data = await response.json();
+
+            // Populate filters with unique values from the dataset
+            populateFilters(data.filters);
+
+            // Initial chart rendering
+            renderCharts(data);
+        } catch (error) {
+            console.error('Error initializing dashboard:', error);
+        }
+    }
+
+    // Fetch visualization data based on filters
+    async function fetchVisualizationData(filters = {}) {
+        loadingSpinner.style.display = "flex";
+        chartsSection.style.display = "none";
+
+        try {
+            const response = await fetch('/api/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(filters)
+            });
+            const data = await response.json();
+
+            renderCharts(data);
+        } catch (error) {
+            console.error('Error fetching visualization data:', error);
+            loadingSpinner.innerHTML = '<p>Error loading data. Please try again.</p>';
+        }
+    }
+
+    // Render charts by updating image sources
+    function renderCharts(data) {
+        document.getElementById('yearlyTrendImg').src = data.plots.yearly_trend + '?t=' + new Date().getTime();
+        document.getElementById('stateIncidentsImg').src = data.plots.state_incidents + '?t=' + new Date().getTime();
+        document.getElementById('speciesIncidentsImg').src = data.plots.species_incidents + '?t=' + new Date().getTime();
+        document.getElementById('seizedItemsImg').src = data.plots.seized_items + '?t=' + new Date().getTime();
+        document.getElementById('reasonCrimeImg').src = data.plots.reason_crime + '?t=' + new Date().getTime();
+        document.getElementById('stateYearHeatmapImg').src = data.plots.state_year_heatmap + '?t=' + new Date().getTime();
+
+        loadingSpinner.style.display = "none";
+        chartsSection.style.display = "block";
+    }
+
+    // Populate filter dropdowns
+    function populateFilters(data) {
+        const stateSelect = document.getElementById('stateFilter');
+        const speciesSelect = document.getElementById('speciesFilter');
+        const yearSelect = document.getElementById('yearFilter');
+        const crimeTypeSelect = document.getElementById('crimeTypeFilter');
+        const reasonSelect = document.getElementById('reasonFilter');
+
+        data.states.forEach(s => stateSelect.innerHTML += `<option value="${s}">${s}</option>`);
+        data.species.forEach(s => speciesSelect.innerHTML += `<option value="${s}">${s}</option>`);
+        data.years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
+        data.crime_types.forEach(c => crimeTypeSelect.innerHTML += `<option value="${c}">${c}</option>`);
+        data.reasons.forEach(r => reasonSelect.innerHTML += `<option value="${r}">${r}</option>`);
+    }
+
+    // Get current filter values
+    function getFilters() {
+        return {
+            state: document.getElementById('stateFilter').value,
+            species: document.getElementById('speciesFilter').value,
+            year: document.getElementById('yearFilter').value,
+            crime_type: document.getElementById('crimeTypeFilter').value,
+            reason: document.getElementById('reasonFilter').value
+        };
+    }
+
+    // Add event listeners to filters
+    document.querySelectorAll('#stateFilter, #speciesFilter, #yearFilter, #crimeTypeFilter, #reasonFilter').forEach(el => {
+        el.addEventListener('change', () => {
+            fetchVisualizationData(getFilters());
+        });
+    });
+
+    // Initialize the dashboard on page load
+    initializeDashboard();
+</script>
+{% endblock %}

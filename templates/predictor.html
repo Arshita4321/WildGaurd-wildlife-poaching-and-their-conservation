@@ -1,0 +1,326 @@
+<!-- templates/predictor.html -->
+{% extends 'base.html' %}
+
+{% block title %}Predictive Model{% endblock %}
+
+{% block additional_styles %}
+.predictor-container {
+    background-color: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.predictor-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.result-container {
+    background-color: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    display: none;
+}
+
+.confidence-meter {
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 5px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.prediction-result {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.info-card {
+    background-color: rgba(46, 125, 50, 0.1);
+    border-left: 4px solid var(--primary-color);
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="main-heading">Poaching Risk Predictor</h1>
+<p class="lead mb-4">Use our machine learning model to assess poaching risk based on various factors.</p>
+
+<div class="info-card">
+    <h5><i class="fas fa-info-circle me-2"></i>How it works</h5>
+    <p class="mb-0">This predictor uses a Random Forest model trained on historical poaching data across India. Enter the parameters below to receive a risk assessment.</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="predictor-container">
+            <h3 class="predictor-title">Input Parameters</h3>
+            <form id="predictorForm">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="state" class="form-label">State</label>
+                        <select class="form-select" id="state" required>
+                            <option value="" disabled selected>Select a state</option>
+                            {% for state in states %}
+                            <option value="{{ state }}">{{ state }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="species" class="form-label">Species</label>
+                        <select class="form-select" id="species" required>
+                            <option value="" disabled selected>Select a species</option>
+                            {% for species in species %}
+                            <option value="{{ species }}">{{ species }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="year" class="form-label">Year</label>
+                        <select class="form-select" id="year" required>
+                            <option value="" disabled selected>Select year</option>
+                            {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="poachingIncidents" class="form-label">Poaching Incidents</label>
+                        <input type="number" class="form-control" id="poachingIncidents" min="1" max="20" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="reason" class="form-label">Reason for Poaching</label>
+                        <select class="form-select" id="reason" required>
+                            <option value="" disabled selected>Select a reason</option>
+                            {% for reason in reasons %}
+                            <option value="{{ reason }}">{{ reason }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="crimeType" class="form-label">Crime Type</label>
+                        <select class="form-select" id="crimeType" required>
+                            <option value="" disabled selected>Select crime type</option>
+                            {% for crime_type in crime_types %}
+                            <option value="{{ crime_type }}">{{ crime_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="seizedItems" class="form-label">Seized Items</label>
+                        <select class="form-select" id="seizedItems" required>
+                            <option value="" disabled selected>Select seized items</option>
+                            {% for item in seized_items %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="arrestsMade" class="form-label">Arrests Made</label>
+                        <input type="number" class="form-control" id="arrestsMade" min="0" max="10" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="caseStatus" class="form-label">Case Status</label>
+                        <select class="form-select" id="caseStatus" required>
+                            <option value="" disabled selected>Select case status</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Open">Open</option>
+                            <option value="Under Investigation">Under Investigation</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="crimesReportedPerYear" class="form-label">Crimes Reported Per Year</label>
+                        <input type="number" class="form-control" id="crimesReportedPerYear" min="50" max="150" required>
+                    </div>
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-calculator me-2"></i>Generate Prediction
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div id="resultContainer" class="result-container">
+            <h3 class="predictor-title">Prediction Result</h3>
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title mb-3">Risk Score</h5>
+                    <div class="prediction-result" id="predictionValue">--</div>
+                    <p class="card-text text-muted">Predicted risk score (0–10)</p>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-2">Model Confidence</h6>
+                    <div id="confidenceValue" class="mb-2">--</div>
+                    <div class="confidence-meter">
+                        <div id="confidenceFill" class="confidence-fill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h5 class="predictor-title">Risk Assessment</h5>
+                <div class="alert alert-warning" id="riskAssessment">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Please generate a prediction to see risk assessment.
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button id="resetButton" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-redo me-2"></i>Reset Inputs
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="predictor-container">
+            <h3 class="predictor-title">Model Information</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Model Type</h5>
+                    <p>Random Forest Regressor</p>
+                    
+                    <h5>Features Used</h5>
+                    <ul>
+                        <li>State</li>
+                        <li>Species Name</li>
+                        <li>Year</li>
+                        <li>Poaching Incidents</li>
+                        <li>Reason for Poaching</li>
+                        <li>Crime Type</li>
+                        <li>Seized Items</li>
+                        <li>Arrests Made</li>
+                        <li>Case Status</li>
+                        <li>Crimes Reported Per Year</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Model Performance</h5>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Mean Absolute Error</td>
+                                <td>~1.5</td>
+                            </tr>
+                            <tr>
+                                <td>R-squared Score</td>
+                                <td>~0.85</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h5>Limitations</h5>
+                    <p>This model uses a synthetic risk score based on historical data. Predictions are indicative and may not reflect real-time trends.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById('predictorForm');
+    const resultContainer = document.getElementById('resultContainer');
+    const predictionValue = document.getElementById('predictionValue');
+    const confidenceValue = document.getElementById('confidenceValue');
+    const confidenceFill = document.getElementById('confidenceFill');
+    const riskAssessment = document.getElementById('riskAssessment');
+    const resetButton = document.getElementById('resetButton');
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get form values
+        const data = {
+            'State': document.getElementById('state').value,
+            'Species Name': document.getElementById('species').value,
+            'Year': parseInt(document.getElementById('year').value),
+            'Poaching Incidents': parseInt(document.getElementById('poachingIncidents').value),
+            'Reason for Poaching': document.getElementById('reason').value,
+            'Crime Type': document.getElementById('crimeType').value,
+            'Seized Items': document.getElementById('seizedItems').value,
+            'Arrests Made': parseInt(document.getElementById('arrestsMade').value),
+            'Case Status': document.getElementById('caseStatus').value,
+            'Crimes Reported Per Year': parseInt(document.getElementById('crimesReportedPerYear').value)
+        };
+        
+        try {
+            resultContainer.style.display = 'block';
+            predictionValue.textContent = 'Loading...';
+            confidenceValue.textContent = 'Calculating...';
+            confidenceFill.style.width = '0%';
+            
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            setTimeout(() => {
+                predictionValue.textContent = result.prediction;
+                confidenceValue.textContent = `${Math.round(result.confidence * 100)}%`;
+                confidenceFill.style.width = `${result.confidence * 100}%`;
+                updateRiskAssessment(result.prediction);
+            }, 800);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            predictionValue.textContent = 'Error';
+            confidenceValue.textContent = 'Failed to generate prediction';
+        }
+    });
+    
+    function updateRiskAssessment(value) {
+        let message, alertClass;
+        
+        if (value < 3.33) {
+            message = 'Low Risk: Minimal poaching threat. Routine monitoring sufficient.';
+            alertClass = 'alert-success';
+        } else if (value <= 6.66) {
+            message = 'Moderate Risk: Some poaching threat. Increased vigilance recommended.';
+            alertClass = 'alert-warning';
+        } else {
+            message = 'High Risk: Significant poaching threat. Immediate action required.';
+            alertClass = 'alert-danger';
+        }
+        
+        riskAssessment.className = `alert ${alertClass}`;
+        riskAssessment.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+    }
+    
+    resetButton.addEventListener('click', function() {
+        form.reset();
+        resultContainer.style.display = 'none';
+    });
+</script>
+{% endblock %}
