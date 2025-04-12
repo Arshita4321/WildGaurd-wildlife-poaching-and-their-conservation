@@ -21,10 +21,7 @@ WildGuard is a machine learning-based solution designed to help conservationists
 - [Model Implementation](#model-implementation)
 - [Dashboard](#dashboard)
 - [Screenshots](#screenshots)
-- [Research References](#research-references)
-- [Installation](#installation)
-- [Contributing](#contributing)
-- [License](#license)
+
 
 ---
 
