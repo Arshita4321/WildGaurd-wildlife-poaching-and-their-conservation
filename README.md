@@ -66,7 +66,6 @@ Techniques Used:
 
 - Algorithm: Random Forest (Supervised Learning)
 - Labels: `Low Risk`, `Moderate Risk`, `High Risk`
-- Accuracy Score: [Add your model accuracy here]
 - Evaluation Metrics: Confusion Matrix, F1 Score, Precision, Recall
 
 ---
